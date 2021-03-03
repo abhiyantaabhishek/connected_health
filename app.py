@@ -1,60 +1,44 @@
-
-# coding: utf-8
-
+#!/usr/bin/env python
+# __author__ = "Ronie Martinez"
+# __copyright__ = "Copyright 2019, Ronie Martinez"
+# __credits__ = ["Ronie Martinez"]
+# __license__ = "MIT"
+# __maintainer__ = "Ronie Martinez"
+# __email__ = "ronmarti18@gmail.com"
+import json
+import time
 import pandas as pd
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier 
-from sklearn import metrics
-from flask import Flask, request, render_template
-import re
-import math
-import pickle
+from flask import Flask, Response, render_template
 
-app = Flask("__name__")
-
-q = ""
-
-@app.route("/")
-def loadPage():
-	return render_template('home.html', query="")
+app = Flask(__name__)
 
 
 
-@app.route("/predict", methods=['POST'])
-def predict():
-    
-    model = pickle.load(open("final_model.sav", "rb"))
-    
+@app.route('/')
+def index():
+    return render_template('index.html')
 
-    inputQuery1 = request.form['query1']
-    inputQuery2 = request.form['query2']
-    inputQuery3 = request.form['query3']
-    inputQuery4 = request.form['query4']
-    inputQuery5 = request.form['query5']
 
-    
-    
-    
-    
-    data = [[inputQuery1, inputQuery2, inputQuery3, inputQuery4, inputQuery5]]
-    #print('data is: ')
-    #print(data)
-    #016.14, 74.00, 0.01968, 0.05914, 0.1619
-    
-    # Create the pandas DataFrame 
-    new_df = pd.DataFrame(data, columns = ['texture_mean', 'perimeter_mean', 'smoothness_mean', 'compactness_mean', 'symmetry_mean'])
-    single = model.predict(new_df)
-    probability = model.predict_proba(new_df)[:,1]
-    print(probability)
-    if single==1:
-        o1 = "The patient is diagnosed with Breast Cancer"
-        o2 = "Confidence: {}".format(probability*100)
-    else:
-        o1 = "The patient is not diagnosed with Breast Cancer"
-        o2 = ""
-    
-    return render_template('home.html', output1=o1, output2=o2, query1 = request.form['query1'], query2 = request.form['query2'],query3 = request.form['query3'],query4 = request.form['query4'],query5 = request.form['query5'])
-    
-if __name__ == "__main__":
-    app.run(debug=True)
+@app.route('/chart-data')
+def chart_data():
+    def generate_random_data():
+        df = pd.read_csv("data.csv")
+        ind = 0		
+        while True:
 
+            if(ind == df.size-1):
+                ind=0
+            else:
+                ind=ind+1
+            json_data = json.dumps(
+                #{'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 'value': random.random() * 100})
+                {'time': df['date_time'].iloc[ind], 'value': int(df['hr'].iloc[ind])}) 
+                #{'time': df['date_time'].iloc[ind], 'value':  ind})  				
+            yield f"data:{json_data}\n\n"
+            time.sleep(0.1)
+
+    return Response(generate_random_data(), mimetype='text/event-stream')
+
+
+if __name__ == '__main__':
+    app.run(debug=True, threaded=True)
